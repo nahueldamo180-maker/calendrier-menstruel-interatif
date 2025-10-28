@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Révision Code de la Route - 40 Questions (SAUVEGARDE)</title>
+    <!-- Chargement de Tailwind CSS pour un design moderne et responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuration de la police Inter et d'un fond agréable */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="quiz-container" class="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl transition-all duration-300">
+        
+        <!-- En-tête -->
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-extrabold text-blue-800">Code de la Route 🇫🇷</h1>
+            <p class="text-gray-600 mt-2 font-semibold">40 Questions | Objectif : 35/40</p>
+        </header>
+
+        <!-- Affichage du Score et de la Question Actuelle -->
+        <div class="flex justify-between items-center mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
+            <p id="score-display" class="text-lg font-medium text-blue-700">Score: 0</p>
+            <p id="question-index-display" class="text-lg font-medium text-blue-700">Question 1 / 40</p>
+        </div>
+
+        <!-- Zone de la Question -->
+        <div id="question-area">
+            <p id="question-text" class="text-xl font-semibold text-gray-800 mb-6 leading-relaxed">Chargement de la question...</p>
+            
+            <!-- Conteneur pour les options de réponse -->
+            <div id="options-container" class="space-y-4">
+                <!-- Les boutons de réponse seront injectés ici par JavaScript -->
+            </div>
+            
+            <!-- Message de Feedback (Correct/Incorrect) -->
+            <div id="feedback-message" class="mt-6 p-3 text-center rounded-lg font-bold hidden opacity-0 transition-opacity duration-300"></div>
+
+            <!-- Bouton pour passer à la question suivante -->
+            <button id="next-button" 
+                    class="w-full mt-6 py-3 px-6 bg-blue-600 text-white text-lg font-semibold rounded-xl hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg disabled:bg-gray-400"
+                    disabled>
+                Question Suivante
+            </button>
+        </div>
+
+        <!-- Zone de Résultat (cachée au début) -->
+        <div id="result-area" class="text-center hidden">
+            <h2 class="text-3xl font-bold text-blue-800 mb-4">Quiz Terminé !</h2>
+            <p id="final-score-text" class="text-2xl text-gray-700 mb-6"></p>
+            <button id="restart-button" 
+                    class="w-full py-3 px-6 bg-green-500 text-white text-lg font-semibold rounded-xl hover:bg-green-600 transition-colors duration-200 shadow-lg">
+                Recommencer le Quiz (Nouvel Ordre)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Définition des 40 questions du Code de la route pour simuler l'examen
+        const questions = [
+            {
+                question: "Que signifie un panneau triangulaire bordé de rouge avec un point d'exclamation ?",
+                options: ["Danger général", "Priorité à droite", "Cédez le passage", "Travaux"],
+                answer: "Danger général"
+            },
+            {
+                question: "Quelle est la vitesse maximale autorisée sur autoroute par temps sec pour un conducteur expérimenté ?",
+                options: ["130 km/h", "110 km/h", "100 km/h", "90 km/h"],
+                answer: "130 km/h"
+            },
+            {
+                question: "Que doit-on faire en présence d'un panneau 'Stop' ?",
+                options: ["Ralentir et marquer le pas", "Marquer un arrêt complet même en l'absence de véhicule", "Céder le passage si nécessaire", "S'arrêter seulement si un autre usager arrive"],
+                answer: "Marquer un arrêt complet même en l'absence de véhicule"
+            },
+            {
+                question: "En cas de panne sur la bande d'arrêt d'urgence, dois-je placer le triangle de pré-signalisation ?",
+                options: ["Oui, toujours à 30 mètres", "Non, car c'est trop dangereux sur autoroute, je mets seulement les feux de détresse", "Oui, à 150 mètres", "Seulement si la visibilité est inférieure à 50 mètres"],
+                answer: "Non, car c'est trop dangereux sur autoroute, je mets seulement les feux de détresse"
+            },
+            {
+                question: "En agglomération, quelle est la vitesse maximale par défaut (sauf indication contraire) ?",
+                options: ["70 km/h", "80 km/h", "50 km/h", "90 km/h"],
+                answer: "50 km/h"
+            },
+            {
+                question: "Quelle distance de sécurité (en temps) est recommandée entre deux véhicules ?",
+                options: ["1 seconde", "2 secondes", "3 secondes", "Le temps de dire 'un peu'"],
+                answer: "2 secondes"
+            },
+            {
+                question: "Le port de la ceinture de sécurité est-il obligatoire pour tous les passagers (avant et arrière) ?",
+                options: ["Oui", "Non, seulement à l'avant", "Non, seulement en agglomération", "Seulement si le véhicule en est équipé"],
+                answer: "Oui"
+            },
+            {
+                question: "Que doit signaler un clignotant ?",
+                options: ["Un changement de direction", "Un dépassement", "Un arrêt", "Toute modification de la trajectoire"],
+                answer: "Toute modification de la trajectoire"
+            },
+            {
+                question: "Vous circulez sur une route limitée à 80 km/h. La distance d'arrêt est d'environ : (Calcul simplifié)",
+                options: ["20 mètres", "40 mètres", "60 mètres", "80 mètres"],
+                answer: "60 mètres"
+            },
+            {
+                question: "Un panneau rond à fond bleu avec une flèche blanche vers le haut signifie :",
+                options: ["Sens interdit", "Obligation d'aller tout droit", "Direction conseillée", "Voie sans issue"],
+                answer: "Obligation d'aller tout droit"
+            },
+            {
+                question: "Le taux d'alcoolémie maximum autorisé pour un jeune conducteur (permis probatoire) est de :",
+                options: ["0,5 g/litre de sang", "0,8 g/litre de sang", "0,2 g/litre de sang", "0 g/litre de sang"],
+                answer: "0,2 g/litre de sang"
+            },
+            {
+                question: "En cas d'accident corporel, qui doit être contacté en premier ?",
+                options: ["L'assureur", "Les secours (15, 18, 112)", "La gendarmerie/police", "Un proche"],
+                answer: "Les secours (15, 18, 112)"
+            },
+            {
+                question: "Que faire lorsque le feu de circulation est orange fixe ?",
+                options: ["Accélérer pour passer", "S'arrêter comme au feu rouge, sauf danger immédiat", "Passer sans ralentir", "Céder le passage aux piétons"],
+                answer: "S'arrêter comme au feu rouge, sauf danger immédiat"
+            },
+            {
+                question: "Un marquage au sol avec une ligne jaune discontinue le long du trottoir indique :",
+                options: ["Arrêt et stationnement interdits", "Stationnement autorisé et limité", "Arrêt autorisé mais stationnement interdit", "Emplacement réservé"],
+                answer: "Stationnement autorisé et limité"
+            },
+            {
+                question: "Le non-respect du port de la ceinture de sécurité entraîne :",
+                options: ["Un simple avertissement", "Une amende uniquement", "Une amende et un retrait de points", "Un retrait de permis"],
+                answer: "Une amende et un retrait de points"
+            },
+            {
+                question: "Quel est l'impact principal d'un pneu sous-gonflé ?",
+                options: ["Meilleure tenue de route", "Diminution de la consommation de carburant", "Augmentation de la consommation de carburant et usure rapide", "Usure lente des freins"],
+                answer: "Augmentation de la consommation de carburant et usure rapide"
+            },
+            {
+                question: "Vous arrivez à une intersection sans signalisation. Quelle est la règle de priorité ?",
+                options: ["Priorité à gauche", "Priorité à la signalisation verticale", "Priorité au plus rapide", "Priorité à droite"],
+                answer: "Priorité à droite"
+            },
+            {
+                question: "Lors d'un dépassement, je dois m'assurer que :",
+                options: ["La manœuvre n'est pas trop longue", "Je ne suis pas moi-même sur le point d'être dépassé", "Je peux me rabattre sans gêner", "Toutes ces réponses"],
+                answer: "Toutes ces réponses"
+            },
+            {
+                question: "Je suis le premier sur les lieux d'un accident. Ma première action est de :",
+                options: ["Alerter les secours", "Protéger la zone", "Secourir les victimes", "Évaluer les dégâts"],
+                answer: "Protéger la zone"
+            },
+            {
+                question: "Dans un tunnel, en cas d'embouteillage, je dois :",
+                options: ["Laisser le moteur tourner pour la ventilation", "Éteindre le moteur et allumer mes feux de détresse", "Klaxonner pour alerter", "Éteindre mes feux et ouvrir les fenêtres"],
+                answer: "Éteindre le moteur et allumer mes feux de détresse"
+            },
+            {
+                question: "Le temps de réaction moyen d'un conducteur est de :",
+                options: ["0,5 seconde", "1 seconde", "1,5 seconde", "2 secondes"],
+                answer: "1 seconde"
+            },
+            {
+                question: "La conduite d'un véhicule sous l'emprise de stupéfiants est punie de :",
+                options: ["Uniquement une amende", "Uniquement un retrait de points", "Un retrait de permis et des peines de prison", "Un avertissement"],
+                answer: "Un retrait de permis et des peines de prison"
+            },
+            {
+                question: "Quelle est la limite de vitesse sur route à double sens de circulation sans séparateur central, par temps de pluie ?",
+                options: ["80 km/h", "70 km/h", "90 km/h", "110 km/h"],
+                answer: "80 km/h"
+            },
+            {
+                question: "Un panneau d'interdiction de stationner s'applique :",
+                options: ["Uniquement côté droit", "Des deux côtés de la rue", "Uniquement après le panneau", "Uniquement avant le panneau"],
+                answer: "Uniquement après le panneau"
+            },
+            {
+                question: "Le voyant d'huile moteur s'allume en rouge. Que dois-je faire ?",
+                options: ["Continuer prudemment jusqu'au garage le plus proche", "M'arrêter immédiatement et couper le contact", "Ajouter de l'huile moteur", "Rétrograder pour faire monter le moteur en régime"],
+                answer: "M'arrêter immédiatement et couper le contact"
+            },
+            {
+                question: "Quand le stationnement est-il considéré comme 'gênant' ?",
+                options: ["Quand il masque un panneau de signalisation", "Quand il est sur une place réservée aux handicapés", "Quand il empêche l'accès à un autre véhicule", "Toutes ces réponses"],
+                answer: "Toutes ces réponses"
+            },
+            {
+                question: "Quelle est la distance minimale pour dépasser un cycliste en agglomération ?",
+                options: ["50 cm", "1 mètre", "1,5 mètre", "2 mètres"],
+                answer: "1 mètre"
+            },
+            {
+                question: "Que signifie un panneau carré à fond bleu avec une flèche blanche pointant vers le haut ?",
+                options: ["Route prioritaire", "Voie rapide", "Sens unique", "Autoroute"],
+                answer: "Sens unique"
+            },
+            {
+                question: "Vous arrivez à un feu tricolore qui passe au vert. Vous devez :",
+                options: ["Démarrer immédiatement", "Vérifier que personne ne déboule ou ne finit de traverser", "Klaxonner pour accélérer les autres conducteurs", "Passer sans regarder"],
+                answer: "Vérifier que personne ne déboule ou ne finit de traverser"
+            },
+            {
+                question: "Quelle est l'utilité du contrôle technique obligatoire ?",
+                options: ["Vérifier l'état de la carrosserie", "S'assurer que le véhicule respecte les normes de sécurité et d'environnement", "Déterminer la valeur du véhicule", "Vérifier la validité de l'assurance"],
+                answer: "S'assurer que le véhicule respecte les normes de sécurité et d'environnement"
+            },
+            {
+                question: "Quel est l'effet de la fatigue sur la conduite ?",
+                options: ["Amélioration de la concentration", "Augmentation du temps de réaction", "Diminution de la distance de freinage", "Meilleure anticipation"],
+                answer: "Augmentation du temps de réaction"
+            },
+            {
+                question: "Sur une route à chaussées séparées (route express), la vitesse maximale est de : (Conducteur expérimenté)",
+                options: ["90 km/h", "110 km/h", "120 km/h", "130 km/h"],
+                answer: "110 km/h"
+            },
+            {
+                question: "Je peux utiliser les feux de brouillard arrière :",
+                options: ["Dès qu'il pleut", "Uniquement en cas de brouillard ou de chute de neige", "Pour signaler un danger", "Quand il fait nuit"],
+                answer: "Uniquement en cas de brouillard ou de chute de neige"
+            },
+            {
+                question: "Le permis à points est un système :",
+                options: ["Régulièrement augmenté", "Dégressif, avec retrait de points en cas d'infraction", "Progressif, avec ajout de points chaque année", "Permanent sans récupération"],
+                answer: "Dégressif, avec retrait de points en cas d'infraction"
+            },
+            {
+                question: "À proximité d'un passage piéton, je dois :",
+                options: ["Accélérer pour passer avant les piétons", "M'arrêter si un piéton est manifestement engagé ou sur le point de l'être", "Klaxonner pour avertir", "Continuer si la voie est libre"],
+                answer: "M'arrêter si un piéton est manifestement engagé ou sur le point de l'être"
+            },
+            {
+                question: "Quelle est l'amende pour l'utilisation du téléphone tenu en main au volant ?",
+                options: ["Une simple amende", "Une amende et un retrait de points", "Un retrait de permis", "Un avertissement"],
+                answer: "Une amende et un retrait de points"
+            },
+            {
+                question: "Un panneau B1 (rond, bordé de rouge) indique :",
+                options: ["Une obligation", "Une interdiction", "Un danger", "Une direction"],
+                answer: "Une interdiction"
+            },
+            {
+                question: "Je dépasse un cyclomoteur. Je dois mettre mon clignotant :",
+                options: ["Seulement pour me rabattre", "Pour déboîter et pour me rabattre", "Seulement pour déboîter", "Il n'est pas nécessaire de le mettre"],
+                answer: "Pour déboîter et pour me rabattre"
+            },
+            {
+                question: "Comment doit être chargé un véhicule ?",
+                options: ["Le chargement ne doit jamais dépasser l'aplomb du véhicule", "Il doit être bien arrimé et ne pas masquer la visibilité ou les feux", "Il peut dépasser de 3 mètres à l'arrière sans signalisation", "Le chargement n'est pas réglementé"],
+                answer: "Il doit être bien arrimé et ne pas masquer la visibilité ou les feux"
+            },
+            {
+                question: "Je suis obligé d'utiliser les feux de croisement :",
+                options: ["Dès qu'il fait nuit", "De jour, en cas de pluie ou de brouillard", "De nuit, sur route éclairée ou non éclairée, et dans les tunnels", "Toutes ces réponses"],
+                answer: "Toutes ces réponses"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+        let shuffledQuestions = []; // Tableau qui contiendra les questions mélangées
+
+        // Récupération des éléments du DOM
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score-display');
+        const indexDisplay = document.getElementById('question-index-display');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const quizContainer = document.getElementById('quiz-container');
+        const questionArea = document.getElementById('question-area');
+        const resultArea = document.getElementById('result-area');
+        const finalScoreText = document.getElementById('final-score-text');
+        const restartButton = document.getElementById('restart-button');
+
+        // Fonction pour mélanger les éléments d'un tableau (Algorithme de Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Fonction d'initialisation du Quiz
+        function initializeQuiz() {
+            // 1. Mélanger les questions pour simuler les conditions réelles de l'examen
+            shuffledQuestions = shuffleArray([...questions]);
+            
+            // 2. Réinitialiser les variables
+            currentQuestionIndex = 0;
+            score = 0;
+            
+            // 3. Charger la première question
+            loadQuestion();
+        }
+
+        // Fonction pour charger la question actuelle
+        function loadQuestion() {
+            // Affichage de la zone de quiz et masquage des résultats
+            questionArea.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+
+            answered = false;
+            nextButton.disabled = true;
+            // Masque et réinitialise le message de feedback
+            feedbackMessage.classList.add('hidden'); 
+            feedbackMessage.classList.remove('opacity-100', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+            
+            const q = shuffledQuestions[currentQuestionIndex];
+            
+            // Mise à jour du texte de la question et de l'index
+            questionText.textContent = q.question;
+            indexDisplay.textContent = `Question ${currentQuestionIndex + 1} / ${questions.length}`;
+            scoreDisplay.textContent = `Score: ${score}`;
+
+            // Réinitialisation des options et création des nouveaux boutons
+            optionsContainer.innerHTML = '';
+            
+            // Mélanger les options pour cette question
+            const shuffledOptions = shuffleArray([...q.options]);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add(
+                    'w-full', 'py-3', 'px-4', 'text-left', 'bg-gray-100', 'text-gray-800', 
+                    'font-medium', 'rounded-lg', 'hover:bg-gray-200', 'transition-all', 
+                    'duration-150', 'shadow-sm', 'border-2', 'border-transparent', 'focus:outline-none',
+                    'active:bg-gray-300'
+                );
+                button.style.pointerEvents = 'auto'; 
+                button.addEventListener('click', () => checkAnswer(button, option, q.answer));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // Fonction pour vérifier la réponse de l'utilisateur
+        function checkAnswer(selectedButton, selectedOption, correctAnswer) {
+            if (answered) return;
+            answered = true;
+            nextButton.disabled = false;
+
+            // Désactiver tous les boutons d'option après la sélection
+            Array.from(optionsContainer.children).forEach(btn => {
+                btn.style.pointerEvents = 'none';
+                btn.classList.remove('hover:bg-gray-200', 'active:bg-gray-300');
+                
+                // Révéler la réponse correcte
+                if (btn.textContent === correctAnswer) {
+                    btn.classList.add('bg-green-100', 'border-green-500', 'shadow-lg');
+                }
+            });
+
+            // Gérer le feedback
+            if (selectedOption === correctAnswer) {
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                selectedButton.classList.add('bg-green-500', 'text-white', 'shadow-xl', 'border-green-700');
+                feedbackMessage.textContent = "✅ Correct ! Bonne réponse.";
+                feedbackMessage.classList.remove('hidden');
+                feedbackMessage.classList.add('bg-green-100', 'text-green-700', 'opacity-100');
+
+            } else {
+                // Si la réponse est fausse, marquer la sélection de l'utilisateur en rouge
+                selectedButton.classList.add('bg-red-500', 'text-white', 'shadow-xl', 'border-red-700');
+                feedbackMessage.textContent = "❌ Incorrect. La bonne réponse est marquée en vert.";
+                feedbackMessage.classList.remove('hidden');
+                feedbackMessage.classList.add('bg-red-100', 'text-red-700', 'opacity-100');
+            }
+        }
+
+        // Fonction pour afficher les résultats finaux
+        function showResult() {
+            questionArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+
+            const errors = questions.length - score;
+            const passingScore = 35;
+            const success = score >= passingScore;
+            
+            let message = `<p class="text-3xl font-bold mb-3">${score} / ${questions.length}</p>`;
+            message += `<p class="text-xl">Erreurs commises : <span class="font-extrabold ${success ? 'text-green-600' : 'text-red-600'}">${errors}</span></p>`;
+            
+            if (success) {
+                message += `<p class="mt-4 text-green-700 text-2xl font-bold">🎉 RÉUSSITE ! Vous avez moins de 5 erreurs, comme à l'examen !</p>`;
+            } else {
+                message += `<p class="mt-4 text-red-700 text-2xl font-bold">⚠️ ÉCHEC. Vous avez ${errors} erreurs. Le maximum autorisé est 5.</p>`;
+                message += `<p class="text-lg mt-2">Continuez de réviser les thèmes moins maîtrisés pour atteindre l'objectif de 35/40.</p>`;
+            }
+            
+            finalScoreText.innerHTML = message;
+        }
+
+        // Gestionnaire d'événement pour le bouton "Suivante"
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        });
+
+        // Gestionnaire d'événement pour le bouton "Recommencer"
+        restartButton.addEventListener('click', initializeQuiz);
+
+        // Démarrage de l'application au chargement de la page
+        window.onload = initializeQuiz;
+
+    </script>
+</body>
+</html>
