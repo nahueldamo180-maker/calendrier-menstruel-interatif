@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Calendrier de Cœur</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chargement de la police Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Couleurs Kawaii/Pastel */
+        :root {
+            --color-period: #ff7f90; /* Rose vif (Règles) */
+            --color-ovulation: #ffda79; /* Jaune pêche (Ovulation) */
+            --color-fertile: #a2d9ff; /* Bleu ciel (Fertile) */
+            --color-today: #9b59b6; /* Violet doux (Aujourd'hui) */
+            --color-background: #fdf4f5; /* Fond très clair */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px; /* Plus d'espace pour l'effet mignon */
+        }
+        .day-cell {
+            padding: 4px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px; /* Coins plus arrondis */
+            transition: transform 0.1s, box-shadow 0.2s;
+            font-size: 0.8rem;
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Petite ombre douce */
+        }
+        .day-cell-number {
+            font-weight: 600;
+            z-index: 10;
+        }
+        .day-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            opacity: 0.7; /* Opacité un peu plus élevée */
+            z-index: 5;
+        }
+        
+        /* Cœur SVG pour les jours clés */
+        .day-icon {
+            z-index: 15;
+            margin-top: 2px;
+        }
+
+        /* Styles spécifiques aux jours */
+        .period-day .day-indicator { background-color: var(--color-period); }
+        .fertile-day .day-indicator { background-color: var(--color-fertile); }
+        .ovulation-day .day-indicator { background-color: var(--color-ovulation); }
+
+        .today {
+            box-shadow: 0 0 0 3px var(--color-today), 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .today .day-cell-number { color: var(--color-today); font-weight: 800; }
+
+        .current-month { background-color: #ffffff; }
+        .other-month { background-color: #fcebeb; color: #a0a0a0; }
+        
+        .kawaii-button {
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(255, 110, 150, 0.3);
+            border: 2px solid white;
+        }
+        .kawaii-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(255, 110, 150, 0.4);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div id="app" class="max-w-4xl mx-auto bg-white shadow-2xl rounded-3xl p-6 sm:p-10 border-4 border-rose-200">
+        <h1 class="text-4xl font-extrabold text-rose-500 mb-6 pb-3 text-center tracking-wider">
+            💖 Mon Calendrier des Petits Cœurs 💖
+        </h1>
+        
+        <!-- Boîte de message personnalisée (remplace alert) -->
+        <div id="message-box" class="fixed inset-0 bg-gray-600 bg-opacity-30 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center border-4 border-rose-300 transform transition duration-300 scale-100">
+                <p id="message-text" class="text-lg font-medium text-rose-600 mb-4"></p>
+                <button id="message-close" class="bg-rose-400 hover:bg-rose-500 text-white font-bold py-2 px-6 rounded-full transition duration-200 kawaii-button">
+                    D'accord !
+                </button>
+            </div>
+        </div>
+
+        <!-- Section de Configuration -->
+        <div id="config-section" class="mb-8 border-2 border-rose-100 p-6 rounded-2xl bg-rose-50/70">
+            <h2 class="text-xl font-bold text-rose-600 mb-4 flex items-center">
+                <span class="text-2xl mr-2">🎀</span> Paramètres de Mon Cycle
+            </h2>
+            <form id="cycle-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                    <label for="lastPeriodStart" class="block text-sm font-medium text-gray-700">Début des dernières règles:</label>
+                    <input type="date" id="lastPeriodStart" class="w-full p-2 border border-rose-300 rounded-xl focus:ring-rose-400 focus:border-rose-400 transition" required>
+                </div>
+                <div class="space-y-1">
+                    <label for="cycleLength" class="block text-sm font-medium text-gray-700">Durée moyenne du cycle (jours):</label>
+                    <input type="number" id="cycleLength" min="20" max="45" value="28" class="w-full p-2 border border-rose-300 rounded-xl focus:ring-rose-400 focus:border-rose-400 transition" required>
+                </div>
+                <div class="space-y-1">
+                    <label for="periodDuration" class="block text-sm font-medium text-gray-700">Durée moyenne des règles (jours):</label>
+                    <input type="number" id="periodDuration" min="2" max="10" value="5" class="w-full p-2 border border-rose-300 rounded-xl focus:ring-rose-400 focus:border-rose-400 transition" required>
+                </div>
+                <div class="md:col-span-3 mt-2">
+                    <button type="submit" class="w-full bg-rose-400 hover:bg-rose-500 text-white font-extrabold py-3 px-4 rounded-full transition duration-200 kawaii-button">
+                        Sauvegarder et Calculer mes Dates
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Section Calendrier et Légende -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Colonne d'informations -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Légende -->
+                <div class="p-4 bg-white rounded-xl shadow-lg border border-rose-100">
+                    <h3 class="font-bold text-lg text-rose-600 mb-3 flex items-center">
+                         <span class="text-2xl mr-2">✨</span> Ma Légende Secrète
+                    </h3>
+                    <ul class="space-y-3 text-sm text-gray-700">
+                        <li class="flex items-center">
+                            <span style="color: var(--color-period);" class="mr-2 text-xl">❤️</span>
+                            Jours de Règles (prévues)
+                        </li>
+                        <li class="flex items-center">
+                            <span style="color: var(--color-fertile);" class="mr-2 text-xl">💙</span>
+                            Fenêtre Fertile (prévue)
+                        </li>
+                        <li class="flex items-center">
+                            <span style="color: var(--color-ovulation);" class="mr-2 text-xl">⭐</span>
+                            Jour d'Ovulation (prévu)
+                        </li>
+                        <li class="flex items-center">
+                            <span style="color: var(--color-today);" class="mr-2 text-xl">💜</span>
+                            Aujourd'hui
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Résumé des prédictions -->
+                <div class="p-4 bg-rose-50 rounded-xl shadow-lg border border-rose-200">
+                    <h3 class="font-bold text-xl text-rose-600 mb-3 flex items-center">
+                        <span class="text-2xl mr-2">🗓️</span> Prochain Rendez-vous
+                    </h3>
+                    <div id="prediction-summary" class="text-gray-700 space-y-2 text-sm">
+                        <p class="text-gray-500">Veuillez d'abord enregistrer vos paramètres dans le formulaire ci-dessus.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Colonne Calendrier -->
+            <div class="lg:col-span-2">
+                <!-- Navigation du Calendrier -->
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prev-month" class="p-2 rounded-full bg-rose-200 hover:bg-rose-300 transition kawaii-button" style="box-shadow: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                    </button>
+                    <h2 id="current-month-year" class="text-2xl font-extrabold text-rose-700"></h2>
+                    <button id="next-month" class="p-2 rounded-full bg-rose-200 hover:bg-rose-300 transition kawaii-button" style="box-shadow: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                    </button>
+                </div>
+
+                <!-- Grille du Calendrier -->
+                <div class="calendar-container border-4 border-rose-100 rounded-2xl p-4 shadow-xl bg-white">
+                    <div class="calendar-grid text-center font-extrabold text-sm text-rose-500 mb-2">
+                        <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+                    </div>
+                    <div id="calendar-body" class="calendar-grid">
+                        <!-- Les jours du calendrier seront générés ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- Variables de Données (Stockage Local) ---
+        const STORAGE_KEY = 'monCycleData';
+        
+        let cycleData = {
+            lastPeriodStart: null, // Chaîne de date 'YYYY-MM-DD' ou null
+            averageCycleLength: 28,
+            averagePeriodDuration: 5,
+        };
+
+        let currentDisplayDate = new Date(); // Date de début du mois affiché
+
+        const MONTHS_FR = [
+            "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+            "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+        ];
+        
+        // --- Fonctions d'Utilité UI ---
+        
+        function showMessage(text) {
+            const box = document.getElementById('message-box');
+            document.getElementById('message-text').textContent = text;
+            box.classList.remove('hidden');
+            box.classList.add('flex');
+        }
+
+        document.getElementById('message-close').addEventListener('click', () => {
+            document.getElementById('message-box').classList.add('hidden');
+            document.getElementById('message-box').classList.remove('flex');
+        });
+
+        // --- Logique de Stockage Local ---
+
+        function loadCycleData() {
+            try {
+                const storedData = localStorage.getItem(STORAGE_KEY);
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    // S'assurer que les valeurs sont des nombres
+                    cycleData.lastPeriodStart = parsedData.lastPeriodStart || null;
+                    cycleData.averageCycleLength = parseInt(parsedData.averageCycleLength) || 28;
+                    cycleData.averagePeriodDuration = parseInt(parsedData.averagePeriodDuration) || 5;
+                    console.log("Données chargées:", cycleData);
+                } else {
+                    console.log("Aucune donnée locale trouvée. Utilisation des valeurs par défaut.");
+                }
+            } catch (error) {
+                console.error("Erreur de chargement LocalStorage:", error);
+            }
+            // Mettre à jour l'UI après le chargement
+            updateFormFields();
+        }
+        
+        function saveCycleData() {
+            try {
+                // S'assurer que les valeurs du formulaire sont à jour dans cycleData
+                cycleData.lastPeriodStart = document.getElementById('lastPeriodStart').value;
+                cycleData.averageCycleLength = parseInt(document.getElementById('cycleLength').value, 10);
+                cycleData.averagePeriodDuration = parseInt(document.getElementById('periodDuration').value, 10);
+                
+                // Sauvegarder les données dans localStorage
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(cycleData));
+                showMessage("Vos jolis paramètres de cycle ont été sauvegardés !");
+                console.log("Données de cycle enregistrées:", cycleData);
+
+                // Mettre à jour le calendrier immédiatement
+                renderCalendar();
+
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde LocalStorage:", error);
+                showMessage("Erreur: Échec de la sauvegarde locale.");
+            }
+        }
+        
+        // --- Logique du Calendrier et de la Prédiction ---
+        
+        /**
+         * Ajoute un nombre de jours à une date et retourne une nouvelle Date (pour éviter la mutation).
+         * @param {Date} date - Date de départ.
+         * @param {number} days - Nombre de jours à ajouter.
+         * @returns {Date} Nouvelle date.
+         */
+        function addDays(date, days) {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+        /**
+         * Calcule les prédictions basées sur les données actuelles du cycle.
+         * Retourne un objet contenant des sets de jours de l'année pour les règles, la fertilité et l'ovulation.
+         */
+        function calculatePredictions() {
+            if (!cycleData.lastPeriodStart) {
+                return { periodDays: new Set(), fertileDays: new Set(), ovulationDays: new Set(), summary: null };
+            }
+
+            // Convertir la chaîne de date en objet Date
+            let lastPeriodDate = new Date(cycleData.lastPeriodStart);
+            // Fixer le décalage horaire pour s'assurer que c'est le jour correct
+            lastPeriodDate.setMinutes(lastPeriodDate.getMinutes() + lastPeriodDate.getTimezoneOffset());
+            
+            const { averageCycleLength, averagePeriodDuration } = cycleData;
+            
+            const periodDays = new Set();
+            const fertileDays = new Set();
+            const ovulationDays = new Set();
+            
+            let currentCycleStart = lastPeriodDate;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let nextPeriodStart = null;
+
+            // Calculer les cycles sur une plage d'environ 1 an
+            for (let i = -6; i < 6; i++) {
+                let cycleStart = addDays(currentCycleStart, i * averageCycleLength);
+                let cycleEnd = addDays(cycleStart, averageCycleLength - 1);
+                
+                // Si le cycle est dans le futur par rapport à aujourd'hui, c'est la première prédiction utile.
+                if (cycleEnd >= today && !nextPeriodStart) {
+                    // S'assurer que c'est le cycle qui commence APRÈS les règles en cours/passées
+                    if (cycleStart > lastPeriodDate) {
+                        nextPeriodStart = cycleStart;
+                    }
+                }
+
+                // 1. Jours de Règles
+                for (let day = 0; day < averagePeriodDuration; day++) {
+                    const periodDay = addDays(cycleStart, day);
+                    const key = periodDay.toISOString().substring(0, 10);
+                    periodDays.add(key);
+                }
+
+                // 2. Jours d'Ovulation et Fertile (Phase Lutéale fixe : 14 jours)
+                const nextPredictedStart = addDays(cycleStart, averageCycleLength);
+                const ovulationDay = addDays(nextPredictedStart, -14);
+                const fertileWindowStart = addDays(ovulationDay, -5); // 6 jours, y compris l'ovulation
+
+                const ovulationKey = ovulationDay.toISOString().substring(0, 10);
+                ovulationDays.add(ovulationKey);
+
+                for (let day = 0; day < 6; day++) { // Jours Fertiles (Ovulation -5 à Ovulation)
+                    const fertileDay = addDays(fertileWindowStart, day);
+                    const fertileKey = fertileDay.toISOString().substring(0, 10);
+                    // S'assurer que l'ovulation est prioritaire
+                    if (!ovulationDays.has(fertileKey)) {
+                        fertileDays.add(fertileKey);
+                    }
+                }
+            }
+            
+            // Correction: Si nextPeriodStart n'a pas été trouvé dans la boucle (ex: si le cycle en cours est très long)
+            if (!nextPeriodStart) {
+                // Calcule le début du prochain cycle après la date de début des dernières règles
+                let nextStartCandidate = currentCycleStart;
+                while (nextStartCandidate <= today) {
+                    nextStartCandidate = addDays(nextStartCandidate, averageCycleLength);
+                }
+                nextPeriodStart = nextStartCandidate;
+            }
+
+            // Générer le résumé de prédiction
+            let summary = null;
+            if (nextPeriodStart) {
+                const nextOvulation = addDays(nextPeriodStart, -14);
+                const nextFertileStart = addDays(nextOvulation, -5);
+                const nextFertileEnd = nextOvulation;
+
+                summary = {
+                    nextPeriodStart: nextPeriodStart.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+                    nextOvulation: nextOvulation.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+                    fertileWindow: `${nextFertileStart.toLocaleDateString('fr-FR', { month: 'long', day: 'numeric' })} au ${nextFertileEnd.toLocaleDateString('fr-FR', { month: 'long', day: 'numeric' })}`
+                };
+            }
+
+            return { periodDays, fertileDays, ovulationDays, summary };
+        }
+        
+        /**
+         * Met à jour l'affichage du calendrier pour le mois actuel.
+         */
+        function renderCalendar() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const displayYear = currentDisplayDate.getFullYear();
+            const displayMonth = currentDisplayDate.getMonth();
+
+            document.getElementById('current-month-year').textContent = 
+                `${MONTHS_FR[displayMonth]} ${displayYear}`;
+
+            const calendarBody = document.getElementById('calendar-body');
+            calendarBody.innerHTML = '';
+            
+            // 1. Calculer les prédictions
+            const { periodDays, fertileDays, ovulationDays, summary } = calculatePredictions();
+
+            // 2. Mettre à jour le résumé
+            updatePredictionSummary(summary);
+            
+            // 3. Déterminer le premier jour du mois (Lundi = 0, Dimanche = 6)
+            let firstDayOfMonth = new Date(displayYear, displayMonth, 1);
+            let startingDayOfWeek = firstDayOfMonth.getDay(); // 0 (Dimanche) à 6 (Samedi)
+            startingDayOfWeek = (startingDayOfWeek === 0) ? 6 : startingDayOfWeek - 1; // Ajuster à Lundi = 0
+
+            // 4. Calculer le nombre de jours du mois précédent à afficher
+            const daysInPrevMonth = (startingDayOfWeek > 0) ? startingDayOfWeek : 0;
+            const totalDaysToShow = 42; // 6 semaines complètes
+
+            let cursorDate = addDays(firstDayOfMonth, -daysInPrevMonth);
+
+            // 5. Générer les cellules du calendrier
+            for (let i = 0; i < totalDaysToShow; i++) {
+                const day = cursorDate.getDate();
+                const month = cursorDate.getMonth();
+                const year = cursorDate.getFullYear();
+                const dateKey = cursorDate.toISOString().substring(0, 10);
+
+                const isCurrentMonth = month === displayMonth && year === displayYear;
+                const isToday = today.toDateString() === cursorDate.toDateString();
+
+                let cellClasses = ['day-cell', isCurrentMonth ? 'current-month' : 'other-month'];
+                let iconHtml = '';
+                
+                // Déterminer le type de jour et l'icône
+                if (ovulationDays.has(dateKey)) {
+                    cellClasses.push('ovulation-day');
+                    iconHtml = '<span class="day-icon text-xl" style="color: var(--color-ovulation);">⭐</span>';
+                } else if (fertileDays.has(dateKey)) {
+                    cellClasses.push('fertile-day');
+                    iconHtml = '<span class="day-icon text-xl" style="color: var(--color-fertile);">💧</span>';
+                } else if (periodDays.has(dateKey)) {
+                    cellClasses.push('period-day');
+                    iconHtml = '<span class="day-icon text-xl" style="color: var(--color-period);">❤️</span>';
+                }
+
+                if (isToday) {
+                    cellClasses.push('today');
+                }
+
+                const cell = document.createElement('div');
+                cell.className = cellClasses.join(' ');
+                
+                // Indicateur de couleur (le fond)
+                const indicator = document.createElement('div');
+                indicator.className = 'day-indicator';
+                
+                // Numéro du jour
+                const dayNumber = document.createElement('span');
+                dayNumber.className = 'day-cell-number';
+                dayNumber.textContent = day;
+                
+                cell.appendChild(indicator);
+                cell.appendChild(dayNumber);
+                // Ajouter l'icône seulement si c'est un jour spécial
+                if (iconHtml) {
+                    cell.insertAdjacentHTML('beforeend', iconHtml);
+                } else {
+                    // Ajouter un espace pour maintenir la hauteur
+                    cell.insertAdjacentHTML('beforeend', '<span class="day-icon text-xl opacity-0">.</span>');
+                }
+                
+                calendarBody.appendChild(cell);
+
+                cursorDate = addDays(cursorDate, 1); // Passer au jour suivant
+            }
+        }
+        
+        function updatePredictionSummary(summary) {
+            const summaryDiv = document.getElementById('prediction-summary');
+            if (summary) {
+                summaryDiv.innerHTML = `
+                    <p class="text-sm"><span class="font-extrabold text-rose-500">Prochaines règles:</span><br>${summary.nextPeriodStart} ❤️</p>
+                    <p class="text-sm"><span class="font-extrabold text-blue-400">Fenêtre fertile:</span><br>${summary.fertileWindow} 💧</p>
+                    <p class="text-sm"><span class="font-extrabold text-yellow-500">Jour d'ovulation:</span><br>${summary.nextOvulation} ⭐</p>
+                    <p class="text-xs mt-3 text-gray-500 italic">Basé sur un cycle de ${cycleData.averageCycleLength} jours. Ces dates sont des estimations.</p>
+                `;
+            } else {
+                 summaryDiv.innerHTML = '<p class="text-sm text-gray-500">Veuillez entrer la date de vos dernières règles et la durée moyenne de votre cycle pour obtenir des prédictions colorées !</p>';
+            }
+        }
+
+        function updateFormFields() {
+            // lastPeriodStart est déjà une chaîne 'YYYY-MM-DD' ou null/vide
+            document.getElementById('lastPeriodStart').value = cycleData.lastPeriodStart || '';
+            document.getElementById('cycleLength').value = cycleData.averageCycleLength;
+            document.getElementById('periodDuration').value = cycleData.averagePeriodDuration;
+            
+            // Une fois les données du formulaire mises à jour, on relance le rendu du calendrier
+            renderCalendar();
+        }
+
+        // --- Événements et Initialisation ---
+
+        // Événement de soumission du formulaire
+        document.getElementById('cycle-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const cycleLength = parseInt(document.getElementById('cycleLength').value, 10);
+            const periodDuration = parseInt(document.getElementById('periodDuration').value, 10);
+            const dateInput = document.getElementById('lastPeriodStart').value;
+
+            if (!dateInput) {
+                showMessage("N'oubliez pas d'entrer la date de début des dernières règles ! 📝");
+                return;
+            }
+            if (cycleLength < 20 || cycleLength > 45) {
+                showMessage("La durée du cycle doit être entre 20 et 45 jours. Vérifiez bien ! 🧐");
+                return;
+            }
+            if (periodDuration < 2 || periodDuration > 10) {
+                showMessage("La durée des règles doit être entre 2 et 10 jours.");
+                return;
+            }
+
+            saveCycleData();
+        });
+        
+        // Navigation du Calendrier
+        document.getElementById('prev-month').addEventListener('click', () => {
+            currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        window.onload = function() {
+            // Charger les données du localStorage et démarrer le calendrier
+            loadCycleData();
+        };
+
+    </script>
+</body>
+</html>
