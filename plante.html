@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identification de Plantes et Recettes</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        /* Styles personnalisés pour les boutons de sélection d'image */
+        .input-option {
+            border: 2px solid;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 flex items-center justify-center">
+
+    <div class="w-full max-w-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-green-700">Plante & Recette 🌿🍲</h1>
+            <p class="text-gray-600 mt-2">Identifiez une plante et découvrez comment l'utiliser en cuisine.</p>
+        </header>
+
+        <!-- Main Card -->
+        <div id="main-card" class="card bg-white p-6 sm:p-10 rounded-xl">
+            <!-- Upload Section -->
+            <div id="upload-section">
+
+                <!-- NETWORK WARNING MESSAGE -->
+                <div id="offline-warning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg font-medium" role="alert">
+                    <!-- Message inséré par JavaScript -->
+                </div>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Comment voulez-vous identifier la plante ?</h3>
+
+                <!-- Choix des options : Caméra ou Galerie -->
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    
+                    <!-- Option 1: Utiliser la Caméra -->
+                    <label for="camera-upload" class="input-option flex-1 flex flex-col items-center justify-center p-6 border-green-500 bg-green-50 text-green-700 rounded-lg cursor-pointer hover:bg-green-100">
+                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.74 4h2.52a2 2 0 011.662.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span class="font-bold text-base text-center">Prendre une Photo</span>
+                        <span class="text-xs mt-1 text-gray-600">Ouvre l'appareil photo</span>
+                    </label>
+                    <input type="file" id="camera-upload" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+                    
+                    <!-- Option 2: Téléverser depuis la Galerie -->
+                    <label for="gallery-upload" class="input-option flex-1 flex flex-col items-center justify-center p-6 border-gray-300 bg-white text-gray-700 rounded-lg cursor-pointer hover:bg-gray-100">
+                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="font-bold text-base text-center">Choisir dans la Galerie</span>
+                        <span class="text-xs mt-1 text-gray-600">Téléverser depuis vos fichiers</span>
+                    </label>
+                    <input type="file" id="gallery-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                </div>
+
+                <div id="image-preview" class="mt-6 hidden">
+                    <h3 class="font-semibold text-gray-700 mb-3">Image sélectionnée:</h3>
+                    <img id="preview-img" class="w-full h-auto max-h-64 object-cover rounded-lg border border-gray-200" alt="Aperçu de l'image">
+                </div>
+
+                <button id="identify-button" onclick="identifyPlantAndSuggestRecipes()" class="w-full mt-6 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition duration-200 focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50" disabled>
+                    Identifier la Plante et Trouver des Recettes
+                </button>
+
+                <!-- Loading/Error Message Area -->
+                <div id="status-message" class="mt-4 text-center hidden p-3 rounded-lg"></div>
+            </div>
+
+            <!-- Results Section (hidden initially) -->
+            <div id="results-section" class="hidden mt-8">
+                <button onclick="resetApp()" class="text-sm text-blue-600 hover:text-blue-800 mb-4 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
+                    Nouvelle Identification
+                </button>
+                <h2 class="text-2xl font-bold text-green-700 mb-4">Résultats d'Identification</h2>
+
+                <div id="plant-info" class="bg-green-50 p-4 rounded-lg mb-6 border-l-4 border-green-400">
+                    <p class="font-semibold text-lg text-green-800">Plante: <span id="plant-name" class="font-normal text-gray-800"></span></p>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Idées de Recettes</h3>
+
+                <div id="recipes-list" class="space-y-6">
+                    <!-- Recipes will be inserted here -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables and constants
+        const apiKey = ""; // La clé API sera fournie par l'environnement d'exécution
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const identifyButton = document.getElementById('identify-button');
+        const statusMessage = document.getElementById('status-message');
+        const offlineWarning = document.getElementById('offline-warning');
+        let base64Image = null;
+
+        /**
+         * Converts a File object to a Base64 string.
+         * @param {File} file The file to convert.
+         * @returns {Promise<string>} A promise that resolves with the Base64 string.
+         */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Keep only the data part
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        /**
+         * Handles image file selection and updates the preview.
+         * @param {Event} event The change event from the file input.
+         */
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            const previewImg = document.getElementById('preview-img');
+            const imagePreviewDiv = document.getElementById('image-preview');
+
+            if (file) {
+                // Display the preview
+                previewImg.src = URL.createObjectURL(file);
+                imagePreviewDiv.classList.remove('hidden');
+
+                // Convert to Base64 for API call
+                try {
+                    base64Image = await fileToBase64(file);
+                    // Enable button ONLY if online AND image is loaded
+                    identifyButton.disabled = !navigator.onLine; 
+                    setStatusMessage('', 'hidden');
+                } catch (error) {
+                    console.error("Erreur lors de la conversion de l'image:", error);
+                    setStatusMessage('Erreur: Impossible de lire le fichier image.', 'bg-red-100 text-red-700');
+                    base64Image = null;
+                    identifyButton.disabled = true;
+                }
+            } else {
+                imagePreviewDiv.classList.add('hidden');
+                base64Image = null;
+                identifyButton.disabled = true;
+            }
+        }
+        
+        /**
+         * Checks the network status and updates the UI accordingly.
+         */
+        function checkNetworkStatus() {
+            const isOnline = navigator.onLine;
+            const hasImage = base64Image !== null;
+
+            if (isOnline) {
+                offlineWarning.classList.add('hidden');
+            } else {
+                offlineWarning.classList.remove('hidden');
+                offlineWarning.innerHTML = '⚠️ **ATTENTION :** Vous êtes hors ligne. Une connexion Internet est nécessaire pour identifier la plante et trouver des recettes. Veuillez vous connecter au Wi-Fi ou aux données mobiles.';
+            }
+
+            // Disable the main button if offline OR if no image is loaded
+            identifyButton.disabled = !isOnline || !hasImage;
+        }
+
+        // --- NETWORK EVENT LISTENERS AND INITIAL CHECK ---
+        window.addEventListener('online', checkNetworkStatus);
+        window.addEventListener('offline', checkNetworkStatus);
+        checkNetworkStatus(); // Initial check at startup
+        // -------------------------------------------------
+
+
+        /**
+         * Displays a status/loading/error message.
+         * @param {string} message The message content.
+         * @param {string} className Tailwind classes for styling (e.g., 'bg-yellow-100 text-yellow-700').
+         */
+        function setStatusMessage(message, className = 'hidden') {
+            statusMessage.innerHTML = message;
+            statusMessage.className = `mt-4 text-center p-3 rounded-lg ${className}`;
+            statusMessage.classList.remove('hidden');
+            if (className === 'hidden') {
+                statusMessage.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Utility to delay execution for exponential backoff.
+         * @param {number} delay The delay in milliseconds.
+         */
+        const delay = (delay) => new Promise(resolve => setTimeout(resolve, delay));
+
+        /**
+         * Makes an authenticated fetch call with exponential backoff.
+         * @param {object} payload The request body payload.
+         * @param {string} url The API URL.
+         * @param {number} maxRetries Maximum number of retries.
+         * @returns {Promise<object>} The JSON response.
+         */
+        async function fetchWithRetry(payload, url, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    }
+
+                    // Handle rate limiting (429) and server errors (5xx) with retry
+                    if (response.status === 429 || response.status >= 500) {
+                        console.warn(`Tentative ${i + 1} échouée (Statut: ${response.status}). Réessai dans un instant...`);
+                        await delay(Math.pow(2, i) * 1000 + Math.random() * 1000); // Exponential backoff
+                        continue;
+                    }
+
+                    // For other errors, throw to break the loop
+                    throw new Error(`Erreur API: ${response.statusText}`);
+
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                        throw error;
+                    }
+                    console.error(`Tentative ${i + 1} échouée. Réessai...`, error);
+                    await delay(Math.pow(2, i) * 1000 + Math.random() * 1000); // Exponential backoff
+                }
+            }
+        }
+
+        /**
+         * Step 1: Calls the LLM to identify the plant from the image.
+         */
+        async function identifyPlant() {
+            setStatusMessage('Identification de la plante en cours... 🔎', 'bg-yellow-100 text-yellow-700');
+
+            const identificationPrompt = "Identifiez la plante dans l'image. Fournissez UNIQUEMENT son nom commun le plus probable et, entre parenthèses, son nom scientifique, SANS autre texte d'introduction ou de conclusion. Exemple de format de sortie: 'Menthe poivrée (Mentha × piperita)'.";
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: identificationPrompt },
+                        {
+                            inlineData: {
+                                mimeType: "image/png", // Utiliser un mimeType générique (le navigateur l'ajustera)
+                                data: base64Image
+                            }
+                        }
+                    ]
+                }],
+                systemInstruction: {
+                    parts: [{ text: "Vous êtes un expert en botanique et votre seule tâche est d'identifier la plante dans l'image." }]
+                },
+            };
+
+            const result = await fetchWithRetry(payload, apiUrl);
+
+            const identifiedText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+            if (!identifiedText || identifiedText.length < 5) {
+                // Erreur si la réponse est vide ou trop courte (non pertinente)
+                throw new Error("L'IA n'a pas pu identifier la plante. Veuillez essayer avec une image plus claire.");
+            }
+
+            // Clean up the text to extract the common name
+            const match = identifiedText.match(/^(.+?)(?=\s*\()/);
+            const commonName = match ? match[1].trim() : identifiedText.split('(')[0].trim();
+
+            return { identifiedText, commonName };
+        }
+
+        /**
+         * Step 2: Calls the LLM to generate recipes for the identified plant using Google Search grounding.
+         * @param {string} plantName The common name of the identified plant.
+         */
+        async function generateRecipes(plantName) {
+            setStatusMessage(`Recherche de recettes délicieuses utilisant : ${plantName}... 🍽️`, 'bg-blue-100 text-blue-700');
+
+            // Define the JSON schema for structured recipe output
+            const recipeSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "nomRecette": { "type": "STRING", "description": "Nom de la recette." },
+                        "description": { "type": "STRING", "description": "Brève description de la recette (2 lignes max)." },
+                        "ingredientsCles": {
+                            "type": "ARRAY",
+                            "items": { "type": "STRING" },
+                            "description": "Liste de 5 ingrédients clés ou étapes courtes."
+                        }
+                    },
+                    "propertyOrdering": ["nomRecette", "description", "ingredientsCles"]
+                }
+            };
+
+            const recipePrompt = `Fournissez 3 recettes populaires et réalisables utilisant l'ingrédient principal suivant : "${plantName}". Assurez-vous que les recettes soient en français.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: recipePrompt }] }],
+                tools: [{ "google_search": {} }], // Use search grounding for up-to-date recipes
+                systemInstruction: {
+                    parts: [{ text: "Vous êtes un chef cuisinier créatif spécialisé en cuisine botanique. Votre réponse DOIT être un tableau JSON structuré contenant 3 recettes, en utilisant le schéma fourni." }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: recipeSchema
+                }
+            };
+
+            const result = await fetchWithRetry(payload, apiUrl);
+
+            const jsonString = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!jsonString) {
+                throw new Error("L'IA n'a pas pu générer de recettes structurées. Le modèle a renvoyé une réponse vide ou invalide.");
+            }
+
+            // Correction: Utiliser un bloc try-catch pour le JSON.parse
+            let recipes;
+            try {
+                recipes = JSON.parse(jsonString);
+            } catch (e) {
+                console.error("Erreur de parage JSON:", e, "Chaîne reçue:", jsonString);
+                throw new Error("Erreur de traitement des recettes. Le format de réponse de l'IA est invalide.");
+            }
+
+            if (!Array.isArray(recipes) || recipes.length === 0) {
+                 throw new Error("Le format des recettes reçues n'est pas valide (tableau vide).");
+            }
+            return recipes;
+        }
+
+        /**
+         * Main function to run the process: Identify -> Get Recipes -> Display.
+         */
+        async function identifyPlantAndSuggestRecipes() {
+            // Re-check network status just before starting the process
+            if (!navigator.onLine) {
+                 setStatusMessage("Opération annulée. Vous êtes hors ligne. Veuillez vous connecter pour identifier la plante.", 'bg-red-100 text-red-700');
+                 checkNetworkStatus(); // Update UI
+                 return;
+            }
+
+            if (!base64Image) {
+                setStatusMessage("Veuillez d'abord sélectionner une image.", 'bg-red-100 text-red-700');
+                return;
+            }
+
+            identifyButton.disabled = true;
+            identifyButton.textContent = "Analyse en cours...";
+            document.getElementById('upload-section').classList.add('opacity-50', 'pointer-events-none');
+
+            try {
+                // Step 1: Identify the Plant
+                const { identifiedText, commonName } = await identifyPlant();
+                document.getElementById('plant-name').textContent = identifiedText;
+
+                // Step 2: Generate Recipes
+                const recipes = await generateRecipes(commonName);
+
+                // Step 3: Display Results
+                displayResults(recipes);
+
+                // Final status update
+                setStatusMessage("Identification et recettes terminées avec succès !", 'bg-green-100 text-green-700');
+
+            } catch (error) {
+                console.error("Erreur générale de l'application:", error);
+                setStatusMessage(`Erreur: ${error.message || "Une erreur inconnue est survenue."}`, 'bg-red-100 text-red-700');
+            } finally {
+                identifyButton.disabled = false;
+                identifyButton.textContent = "Identifier la Plante et Trouver des Recettes";
+                document.getElementById('upload-section').classList.remove('opacity-50', 'pointer-events-none');
+                checkNetworkStatus(); // Ensure button status is correct after processing
+            }
+        }
+
+        /**
+         * Renders the final results on the UI.
+         * @param {Array<object>} recipes The list of recipe objects.
+         */
+        function displayResults(recipes) {
+            const recipesListDiv = document.getElementById('recipes-list');
+            recipesListDiv.innerHTML = ''; // Clear previous results
+
+            recipes.forEach((recipe, index) => {
+                const recipeHtml = `
+                    <div class="p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition duration-200">
+                        <h4 class="text-xl font-semibold text-green-600 mb-2">${index + 1}. ${recipe.nomRecette}</h4>
+                        <p class="text-gray-600 italic mb-3">${recipe.description}</p>
+                        <h5 class="font-medium text-gray-700 mb-1">Ingrédients Clés / Étapes:</h5>
+                        <ul class="list-disc list-inside space-y-1 ml-4 text-sm text-gray-600">
+                            ${recipe.ingredientsCles.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                recipesListDiv.innerHTML += recipeHtml;
+            });
+
+            // Show results and hide upload section
+            document.getElementById('upload-section').classList.add('hidden');
+            document.getElementById('results-section').classList.remove('hidden');
+        }
+
+        /**
+         * Resets the application state for a new request.
+         */
+        function resetApp() {
+            // Vider les champs d'input pour permettre de sélectionner le même fichier à nouveau si nécessaire
+            document.getElementById('camera-upload').value = '';
+            document.getElementById('gallery-upload').value = '';
+
+            document.getElementById('preview-img').src = '';
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('identify-button').disabled = true;
+            document.getElementById('results-section').classList.add('hidden');
+            document.getElementById('upload-section').classList.remove('hidden');
+            base64Image = null;
+            setStatusMessage('', 'hidden');
+            checkNetworkStatus(); // Re-check network status after reset
+        }
+
+    </script>
+</body>
+</html>
